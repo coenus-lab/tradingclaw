@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tradingclaw
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ['5432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/tradingclaw
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: supersecret
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    ports: ['8000:8000']
+    depends_on: [db, redis]
+
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/v1
+    ports: ['3000:3000']
+    depends_on: [backend]
+
+volumes:
+  pgdata:
