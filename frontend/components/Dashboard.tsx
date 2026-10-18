@@ -1,22 +1,28 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { api, getAuthenticatedUserId } from '@/lib/api';
 import { useSessionStore } from '@/store/useSessionStore';
-
-const userId = 1;
 
 export default function Dashboard() {
   const { mode, sessionStarted, pnlVisible, toggleSession, environment, setEnvironment } = useSessionStore();
+  const userId = getAuthenticatedUserId();
 
   const scoreQuery = useQuery({
     queryKey: ['score'],
-    queryFn: async () => (await api.get(`/users/${userId}/score`)).data
+    queryFn: async () => (await api.get(`/users/${userId}/score`)).data,
+    enabled: userId !== null
   });
   const eventsQuery = useQuery({
     queryKey: ['events'],
-    queryFn: async () => (await api.get(`/users/${userId}/events`)).data
+    queryFn: async () => (await api.get(`/users/${userId}/events`)).data,
+    enabled: userId !== null
   });
+
+  if (userId === null) {
+    return <main className="p-6"><p className="card">Please <Link className="text-blue-400" href="/login">log in</Link> before viewing your dashboard.</p></main>;
+  }
 
   return (
     <main className="p-6 space-y-4">

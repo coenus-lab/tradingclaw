@@ -47,7 +47,8 @@ MVP trading platform with Training/Mastery UX, Guard mode enforcement, Stability
 - Reveal only after trade closes or session ends.
 
 ## Local Run (Docker)
-1. Copy `.env.example` to `.env` and set `ENCRYPTION_KEY`.
+1. Copy `.env.example` to `.env` and replace every placeholder. Generate a random
+   `JWT_SECRET` (at least 32 characters) and a persistent Fernet `ENCRYPTION_KEY`.
 2. Start stack:
    ```bash
    docker compose up --build
@@ -56,10 +57,14 @@ MVP trading platform with Training/Mastery UX, Guard mode enforcement, Stability
 4. Backend docs: `http://localhost:8000/docs`
 
 ## Demo flow (Kraken demo)
-1. Register user: `POST /v1/auth/register`.
-2. Save demo key/secret: `POST /v1/credentials` with `environment=demo`.
-3. Open `/trade` and place small market order for `PI_XBTUSD`.
-4. Attempt blocked action (e.g., set leverage above policy or stop widening flag) and verify 403 + event feed block reason.
+1. Register user: `POST /v1/auth/register`, then log in with `POST /v1/auth/login`.
+2. Send the returned token as `Authorization: Bearer <token>` on all other API calls.
+3. Save demo key/secret: `POST /v1/credentials` with `environment=demo`.
+4. Open `/trade` and place small market order for `PI_XBTUSD`.
+5. Attempt blocked action (e.g., set leverage above policy or stop widening flag) and verify 403 + event feed block reason.
+
+Public registration always creates a `trader`. Bootstrap or promote administrators through a
+controlled database operation; the public registration endpoint never grants the `admin` role.
 
 ## Deploy options
 - **Render:** separate services for backend/frontend + managed Postgres + Redis.

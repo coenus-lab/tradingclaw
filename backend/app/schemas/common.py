@@ -1,11 +1,26 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class RegisterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=12, max_length=256)
+
+
+class LoginIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=256)
 
 
 class EventIn(BaseModel):
-    user_id: int
+    model_config = ConfigDict(extra="forbid")
+
     event_type: str
     action: str
     symbol: Optional[str] = None
@@ -13,7 +28,8 @@ class EventIn(BaseModel):
 
 
 class GuardEvaluateIn(BaseModel):
-    user_id: int
+    model_config = ConfigDict(extra="forbid")
+
     action: str
     symbol: str = "PI_XBTUSD"
     requested_leverage: Optional[float] = None
@@ -49,7 +65,36 @@ class PolicyIn(BaseModel):
 
 
 class CredentialIn(BaseModel):
-    user_id: int
-    environment: str
+    model_config = ConfigDict(extra="forbid")
+
+    environment: Literal["demo", "prod"]
     api_key: str
     api_secret: str
+
+
+class KrakenOrderIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    orderType: Literal["mkt", "lmt", "stp"]
+    symbol: str = "PI_XBTUSD"
+    size: float = Field(gt=0)
+    limitPrice: Optional[float] = Field(default=None, gt=0)
+    stopPrice: Optional[float] = Field(default=None, gt=0)
+    reduceOnly: bool = False
+    cliOrdId: Optional[str] = Field(default=None, max_length=100)
+    leverage: float = Field(gt=0)
+    risk_at_stop_pct: float = Field(gt=0)
+    is_add: bool = False
+    is_stop_widening: bool = False
+
+    @model_validator(mode="after")
+    def require_price_for_conditional_orders(self):
+        if self.orderType == "lmt" and self.limitPrice is None:
+            raise ValueError("limitPrice is required for limit orders")
+        if self.orderType == "stp" and self.stopPrice is None:
+            raise ValueError("stopPrice is required for stop orders")
+        return self
+
+    def kraken_payload(self) -> Dict[str, Any]:
+        allowed = {"orderType", "symbol", "size", "limitPrice", "stopPrice", "reduceOnly", "cliOrdId"}
+        return {key: value for key, value in self.model_dump().items() if key in allowed and value is not None}

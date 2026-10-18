@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '@/lib/api';
+import { api, getAuthenticatedUserId } from '@/lib/api';
 
 export default function TradePage() {
   const [message, setMessage] = useState('');
@@ -9,8 +9,10 @@ export default function TradePage() {
 
   const place = async (type: 'mkt' | 'lmt' | 'stp') => {
     try {
-      const payload = { orderType: type, symbol: 'PI_XBTUSD', size: Number(size), leverage: 2, type, risk_at_stop_pct: 0.8 };
-      const res = await api.post('/kraken/1/order?environment=demo', payload);
+      const userId = getAuthenticatedUserId();
+      if (userId === null) throw new Error('Log in before placing an order');
+      const payload = { orderType: type, symbol: 'PI_XBTUSD', size: Number(size), leverage: 2, risk_at_stop_pct: 0.8 };
+      const res = await api.post(`/kraken/${userId}/order?environment=demo`, payload);
       setMessage(`Order sent: ${JSON.stringify(res.data)}`);
     } catch (err: any) {
       setMessage(`Blocked/Error: ${JSON.stringify(err.response?.data || err.message)}`);
