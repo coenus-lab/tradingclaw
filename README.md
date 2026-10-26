@@ -56,6 +56,36 @@ MVP trading platform with Training/Mastery UX, Guard mode enforcement, Stability
 3. Frontend: `http://localhost:3000`
 4. Backend docs: `http://localhost:8000/docs`
 
+Use a non-default PostgreSQL username and password; the example database name
+`tradingclaw` is intentional. `openssl rand -hex 32` produces a URL-safe password
+as well as a JWT secret. If using other password characters, percent-encode URL
+reserved characters in `DATABASE_URL` (Compose currently builds this URL directly
+from the PostgreSQL values, so prefer hex passwords there).
+Keep the same Fernet key across restarts: replacing it makes existing encrypted
+credentials unreadable. Existing `pgdata` volumes retain their original database
+credentials; editing `.env` does not rotate an initialized database's password.
+Compose waits for PostgreSQL TCP readiness and Redis before starting the backend.
+
+### Disposable startup smoke test
+
+With Docker Engine, Docker Compose v2 supporting `up --wait`, and host ports
+3000 and 8000 available, run from the repository root:
+
+```bash
+python scripts/compose_smoke.py
+```
+
+The test generates temporary secrets without using your `.env`, rejects each
+missing/empty mandatory variable, builds and starts all four services, checks
+PostgreSQL/Redis readiness, frontend HTTP and backend health, registration/login,
+authenticated access and anonymous rejection. It stores a dummy credential,
+restarts the backend and verifies database ciphertext can still be decrypted by a
+fresh process with the same key. It never calls Kraken or places orders.
+It removes only its randomly named Compose project's containers and volume.
+The CI `compose-smoke` job runs the same check; a passing SQLite security suite
+alone does not establish stack startup or restart persistence. This is an HTTP/API
+smoke test, not a browser end-to-end test or a production deployment check.
+
 ## Demo flow (Kraken demo)
 1. Register user: `POST /v1/auth/register`, then log in with `POST /v1/auth/login`.
 2. Send the returned token as `Authorization: Bearer <token>` on all other API calls.
